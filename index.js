@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jenr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ["http://localhost:5173"],
   // origin: [],
   credentials: true,
   optionalSuccessStatus: 200,
@@ -35,15 +35,23 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
-    const usersCollection = client.db('Fast-Bite').collection('users');
-    const menuCollection = client.db('fastBite').collection('menu');
-    const cartCollection = client.db('fastBite').collection('cart');
-    const restaurantCollection = client.db('Fast-Bite').collection('restaurant');
-    const becomeMemberCollection = client.db('Fast-Bite').collection('become-member');
-    const riderCollection = client.db('Fast-Bite').collection('rider');
+
+    // *********** All Collection List ************
+
+    const usersCollection = client.db("Fast-Bite").collection("users");
+    const menuCollection = client.db("fastBite").collection("menu");
+    const cartCollection = client.db("fastBite").collection("cart");
+    const restaurantCollection = client
+      .db("Fast-Bite")
+      .collection("restaurants");
+
+    const becomeMemberCollection = client
+      .db("Fast-Bite")
+      .collection("become-member");
+    const riderCollection = client.db("Fast-Bite").collection("rider");
 
     // Save the user to the database.
-    app.post('/users/:email', async (req, res) => {
+    app.post("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const user = req.body;
@@ -51,11 +59,15 @@ async function run() {
       if (isExist) {
         return res.send(isExist);
       }
-      const result = await usersCollection.insertOne({ ...user, role: 'customer', timestamp: Date.now() });
-      res.send(result)
-    })
+      const result = await usersCollection.insertOne({
+        ...user,
+        role: "customer",
+        timestamp: Date.now(),
+      });
+      res.send(result);
+    });
     // get the user database
-    app.get('/user', async (req, res) => {
+    app.get("/user", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -85,56 +97,62 @@ async function run() {
       res.send(result);
     });
 
-    // restaurantCollection
+    // ***************Restaurant Related apis****************
+
+    // get all restaurant
+    app.get("/restaurants", async (req, res) => {
+      const data = await restaurantCollection.find().toArray();
+      res.send(data);
+    });
 
     // becomeMemberCollection
-    app.post('/become-member', async (req, res) => {
+    app.post("/become-member", async (req, res) => {
       const memberInfo = req.body;
       const result = await becomeMemberCollection.insertOne(memberInfo);
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    app.get('/become-member', async (req, res) => {
+    app.get("/become-member", async (req, res) => {
       const result = await becomeMemberCollection.find().toArray();
       // console.log(result)
-      res.send(result)
-    })
-    app.get('/become-member/:email', async (req, res) => {
+      res.send(result);
+    });
+    app.get("/become-member/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email }
+      const query = { email };
       const result = await becomeMemberCollection.findOne(query);
       // console.log(result)
-      res.send(result)
-    })
+      res.send(result);
+    });
 
-    app.delete('/become-member/:id', async (req, res) => {
+    app.delete("/become-member/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await becomeMemberCollection.deleteOne(query);
 
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     // Rider crud operation in the database.
-    app.post('/rider/:id', async (req, res) => {
+    app.post("/rider/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
+      const query = { _id: new ObjectId(id) };
 
       let result = await becomeMemberCollection.findOne(query);
-      let filter = { email: result.email }
+      let filter = { email: result.email };
       let result1 = await usersCollection.findOne(filter);
       const updateDoc = {
         $set: {
-          role: result.role
-        }
-      }
+          role: result.role,
+        },
+      };
       result.isApprove = true;
       result = await riderCollection.insertOne(result);
-      result1 = await usersCollection.updateOne(filter, updateDoc)
+      result1 = await usersCollection.updateOne(filter, updateDoc);
       const result3 = await becomeMemberCollection.deleteOne(query);
 
-      res.send(result)
-    })
+      res.send(result);
+    });
 
     //get menu items
     app.get("/menu", async (req, res) => {
