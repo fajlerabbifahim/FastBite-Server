@@ -34,9 +34,15 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
+
+    // *********** Al Collection List ************
+
     const usersCollection = client.db("Fast-Bite").collection("users");
     const menuCollection = client.db("fastBite").collection("menu");
     const cartCollection = client.db("fastBite").collection("cart");
+    const restaurantCollection = client
+      .db("Fast-Bite")
+      .collection("restaurants");
 
     app.post("/users/:email", async (req, res) => {
       const email = req.params.email;
@@ -82,6 +88,22 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // ***************Restaurant Related apis****************
+
+    //get all restaurant
+    // app.get("/restaurants", async (req, res) => {
+    //   const data = await restaurantCollection.find().toArray();
+    //   res.send(data);
+    // });
+    app.get("/restaurants", async (req, res) => {
+      try {
+        const data = await restaurantCollection.find().toArray();
+        res.send(data);
+      } catch (error) {
+        res.status(500).send({ message: "Internal Server Error", error });
+      }
     });
 
     //get menu items
