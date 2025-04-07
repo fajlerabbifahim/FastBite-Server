@@ -105,6 +105,28 @@ async function run() {
       res.send(data);
     });
 
+    //get specific restaurant data
+
+    app.get("/restaurantDetails/:id", async (req, res) => {
+      const id = req.params.id;
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).send({ error: "Invalid restaurant ID" });
+      }
+      try {
+        const result = await restaurantCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!result) {
+          return res.status(404).send({ error: "Restaurant not found" });
+        }
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching restaurant details:", error);
+        res.status(500).send({ error: "Internal server error" });
+      }
+    });
+
     // becomeMemberCollection
     app.post("/become-member", async (req, res) => {
       const memberInfo = req.body;
