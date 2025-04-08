@@ -105,6 +105,22 @@ async function run() {
       res.send(data);
     });
 
+    //get top reviews restaurant
+
+    app.get("/restaurants/top", async (req, res) => {
+      try {
+        const topRestaurants = await restaurantCollection
+          .find()
+          .sort({ stars: -1 })
+          .limit(5)
+          .toArray();
+
+        res.send(topRestaurants);
+      } catch (error) {
+        res.status(500).send({ error: "Something went wrong!" });
+      }
+    });
+
     //get specific restaurant data
 
     app.get("/restaurantDetails/:id", async (req, res) => {
