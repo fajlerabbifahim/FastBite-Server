@@ -49,6 +49,7 @@ async function run() {
       .db("Fast-Bite")
       .collection("become-member");
     const riderCollection = client.db("Fast-Bite").collection("rider");
+    const foodsCollection = client.db("Fast-Bite").collection("foods");
 
     // Save the user to the database.
     app.post("/users/:email", async (req, res) => {
@@ -141,6 +142,19 @@ async function run() {
         console.error("Error fetching restaurant details:", error);
         res.status(500).send({ error: "Internal server error" });
       }
+    });
+
+    // =================food Related apis====================
+
+    app.get("/popularDishes", async (req, res) => {
+      const data = await foodsCollection.find().toArray();
+      const result = data.slice(0, 8);
+      res.send(result);
+    });
+
+    app.get("/foods", async (req, res) => {
+      const result = await foodsCollection.find().toArray();
+      res.send(result);
     });
 
     // becomeMemberCollection
