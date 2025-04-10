@@ -102,6 +102,13 @@ async function run() {
     });
 
     // ***************Restaurant Related apis****************
+    // get owner restaurant by email
+    app.get("/owner/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { owner_email: email };
+      const result = await restaurantCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // get all restaurant
     app.get("/restaurants", async (req, res) => {
@@ -279,63 +286,147 @@ async function run() {
     // });
 
 
+    // app.post("/orders", async (req, res) => {
+    //   const orderInfo = req.body; 
+    //   const emailQuery = { email: orderInfo.email };
+
+    //   let user = await ordersCollection.findOne(emailQuery);
+    //   let newUser; 
+
+    //   if (user) {
+    //     const foodId = orderInfo.food.id;
+
+    //     const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
+
+    //     if (foodIndex !== -1) {
+
+    //       user.cart[foodIndex].quantity += 1;
+    //     } else {
+
+    //       user.cart.push({ foodId: foodId, quantity: 1 });
+    //     }
+
+
+    //     const result = await ordersCollection.updateOne(
+    //       { email: orderInfo.email },
+    //       { $set: { cart: user.cart } }
+    //     );
+
+
+    //     await foodsCollection.updateOne(
+    //       { _id: new ObjectId(foodId) }, 
+    //       { $inc: { quantity: -1 } } 
+    //     );
+
+    //     res.send(result);
+    //   } else {
+
+    //     newUser = {
+    //       email: orderInfo.email,
+    //       cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
+    //     };
+
+    //     const result = await ordersCollection.insertOne(newUser);
+
+
+    //     await foodsCollection.updateOne(
+    //       { _id: new ObjectId(orderInfo.food.id) }, 
+    //       { $inc: { quantity: -1 } }
+    //     );
+
+    //     res.send(result);
+    //   }
+    //   if (newUser) {
+    //     console.log("New user created:", newUser.email);
+    //   }
+    // });
+
     app.post("/orders", async (req, res) => {
-      const orderInfo = req.body; // { email: "...", food: { id: "abc123" } }
+      const orderInfo = req.body;
       const emailQuery = { email: orderInfo.email };
 
+      // Step 1: Find food details from DB to get name, price, and restaurantId
+      const foodItem = await foodsCollection.findOne({ _id: new ObjectId(orderInfo.food.foodId) });
+
+      if (!foodItem) {
+        return res.status(404).send({ message: "Food not found" });
+      }
+
+      const foodId = orderInfo.food.foodId;
+      const foodImage = orderInfo.food.foodImage;
+      const restaurantId = foodItem.restaurantId;
+      const foodName = foodItem.name;
+      const unitPrice = foodItem.price;
+
       let user = await ordersCollection.findOne(emailQuery);
-      let newUser; // বাইরে declare করলাম যাতে পরে access করা যায়
 
       if (user) {
-        const foodId = orderInfo.food.id;
-
-        // cart থেকে খাবার খুঁজে বের করো
         const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
 
         if (foodIndex !== -1) {
-          // খাবার থাকলে quantity বাড়াও
+          // Update existing food item in cart
           user.cart[foodIndex].quantity += 1;
+          user.cart[foodIndex].price = user.cart[foodIndex].quantity * unitPrice;
         } else {
-          // না থাকলে নতুন করে cart এ যোগ করো
-          user.cart.push({ foodId: foodId, quantity: 1 });
+          // Add new item to cart
+          user.cart.push({
+            foodId: foodId,
+            name: foodName,
+            quantity: 1,
+            price: unitPrice,
+            restaurantId: restaurantId,
+            image: foodImage
+          });
         }
-
-        // cart আপডেট করে ডাটাবেসে save করো
+        const totalQuantity = user.cart.reduce((sum, item) => sum + item.quantity, 0);
         const result = await ordersCollection.updateOne(
           { email: orderInfo.email },
-          { $set: { cart: user.cart } }
+          { $set: { cart: user.cart, totalQuantity } }
         );
-
-        // foodsCollection থেকে খাবারের quantity 1 কমানো
+        // Reduce quantity from foodsCollection
         await foodsCollection.updateOne(
-          { _id: new ObjectId(foodId) }, // foodId এর মাধ্যমে food খুঁজে বের করা
-          { $inc: { quantity: -1 } } // quantity কমানো
+          { _id: new ObjectId(foodId) },
+          { $inc: { quantity: -1 } }
         );
 
         res.send(result);
       } else {
-        // ইউজার না থাকলে নতুন ইউজার তৈরি করো
-        newUser = {
+        // If user doesn't exist, create new
+        const newUser = {
           email: orderInfo.email,
-          cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
+          cart: [
+            {
+              foodId: foodId,
+              name: foodName,
+              quantity: 1,
+              price: unitPrice,
+              restaurantId: restaurantId,
+              image: foodImage
+
+            }
+          ],
+          status: 'isPending',
+          totalQuantity: 1
         };
 
         const result = await ordersCollection.insertOne(newUser);
 
-        // foodsCollection থেকে খাবারের quantity 1 কমানো
         await foodsCollection.updateOne(
-          { _id: new ObjectId(orderInfo.food.id) }, // foodId দিয়ে food খুঁজে বের করা
-          { $inc: { quantity: -1 } } // quantity কমানো
+          { _id: new ObjectId(foodId) },
+          { $inc: { quantity: -1 } }
         );
 
         res.send(result);
       }
-
-      // চাইলে এখানে newUser কে log করতে পারো
-      if (newUser) {
-        console.log("New user created:", newUser.email);
-      }
     });
+
+    // my-order
+    app.get("/my-order/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await ordersCollection.findOne(query);
+      res.send(result);
+    })
 
 
 
