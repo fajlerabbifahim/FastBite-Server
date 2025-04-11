@@ -12,7 +12,7 @@ const port = process.env.PORT || 5000;
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.o3yie.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jenr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 
 const corsOptions = {
@@ -53,6 +53,7 @@ async function run() {
     const riderCollection = client.db("Fast-Bite").collection("rider");
     const foodsCollection = client.db("Fast-Bite").collection("foods");
     const ordersCollection = client.db("Fast-Bite").collection("orders");
+    const addToCartCollection = client.db("Fast-Bite").collection("addToCart");
 
     // Save the user to the database.
     app.post("/users/:email", async (req, res) => {
@@ -240,112 +241,11 @@ async function run() {
     });
     // ---------------------------------------------------------------------------------------------------
     // order collection
-    // app.post("/orders", async (req, res) => {
-    //   const orderInfo = req.body; // { email: "...", food: { id: "abc123" } }
-    //   const emailQuery = { email: orderInfo.email };
-
-    //   let user = await ordersCollection.findOne(emailQuery);
-    //   let newUser; // বাইরে declare করলাম যাতে পরে access করা যায়
-
-    //   if (user) {
-    //     const foodId = orderInfo.food.id;
-
-    //     // cart থেকে খাবার খুঁজে বের করো
-    //     const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
-
-    //     if (foodIndex !== -1) {
-    //       // খাবার থাকলে quantity বাড়াও
-    //       user.cart[foodIndex].quantity += 1;
-    //     } else {
-    //       // না থাকলে নতুন করে cart এ যোগ করো
-    //       user.cart.push({ foodId: foodId, quantity: 1 });
-    //     }
-
-    //     // cart আপডেট করে ডাটাবেসে save করো
-    //     const result = await ordersCollection.updateOne(
-    //       { email: orderInfo.email },
-    //       { $set: { cart: user.cart } }
-    //     );
-
-    //     res.send({ success: true, message: "Order updated", result });
-    //   } else {
-    //     // ইউজার না থাকলে নতুন ইউজার তৈরি করো
-    //     newUser = {
-    //       email: orderInfo.email,
-    //       cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
-    //     };
-
-    //     const result = await ordersCollection.insertOne(newUser);
-    //     res.send({ success: true, message: "New user and order created", result });
-    //   }
-
-    //   // চাইলে এখানে newUser কে log করতে পারো
-    //   if (newUser) {
-    //     console.log("New user created:", newUser.email);
-    //   }
-    // });
 
 
-    // app.post("/orders", async (req, res) => {
-    //   const orderInfo = req.body; 
-    //   const emailQuery = { email: orderInfo.email };
-
-    //   let user = await ordersCollection.findOne(emailQuery);
-    //   let newUser; 
-
-    //   if (user) {
-    //     const foodId = orderInfo.food.id;
-
-    //     const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
-
-    //     if (foodIndex !== -1) {
-
-    //       user.cart[foodIndex].quantity += 1;
-    //     } else {
-
-    //       user.cart.push({ foodId: foodId, quantity: 1 });
-    //     }
-
-
-    //     const result = await ordersCollection.updateOne(
-    //       { email: orderInfo.email },
-    //       { $set: { cart: user.cart } }
-    //     );
-
-
-    //     await foodsCollection.updateOne(
-    //       { _id: new ObjectId(foodId) }, 
-    //       { $inc: { quantity: -1 } } 
-    //     );
-
-    //     res.send(result);
-    //   } else {
-
-    //     newUser = {
-    //       email: orderInfo.email,
-    //       cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
-    //     };
-
-    //     const result = await ordersCollection.insertOne(newUser);
-
-
-    //     await foodsCollection.updateOne(
-    //       { _id: new ObjectId(orderInfo.food.id) }, 
-    //       { $inc: { quantity: -1 } }
-    //     );
-
-    //     res.send(result);
-    //   }
-    //   if (newUser) {
-    //     console.log("New user created:", newUser.email);
-    //   }
-    // });
-
-    app.post("/orders", async (req, res) => {
+    app.post("/addToCart", async (req, res) => {
       const orderInfo = req.body;
       const emailQuery = { email: orderInfo.email };
-
-      // Step 1: Find food details from DB to get name, price, and restaurantId
       const foodItem = await foodsCollection.findOne({ _id: new ObjectId(orderInfo.food.foodId) });
 
       if (!foodItem) {
@@ -358,7 +258,7 @@ async function run() {
       const foodName = foodItem.name;
       const unitPrice = foodItem.price;
 
-      let user = await ordersCollection.findOne(emailQuery);
+      let user = await addToCartCollection.findOne(emailQuery);
 
       if (user) {
         const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
@@ -375,11 +275,12 @@ async function run() {
             quantity: 1,
             price: unitPrice,
             restaurantId: restaurantId,
-            image: foodImage
+            image: foodImage,
+            status: 'isPending',
           });
         }
         const totalQuantity = user.cart.reduce((sum, item) => sum + item.quantity, 0);
-        const result = await ordersCollection.updateOne(
+        const result = await addToCartCollection.updateOne(
           { email: orderInfo.email },
           { $set: { cart: user.cart, totalQuantity } }
         );
@@ -401,15 +302,15 @@ async function run() {
               quantity: 1,
               price: unitPrice,
               restaurantId: restaurantId,
-              image: foodImage
-
+              image: foodImage,
+              status: 'isPending',
             }
           ],
-          status: 'isPending',
+
           totalQuantity: 1
         };
 
-        const result = await ordersCollection.insertOne(newUser);
+        const result = await addToCartCollection.insertOne(newUser);
 
         await foodsCollection.updateOne(
           { _id: new ObjectId(foodId) },
@@ -421,12 +322,63 @@ async function run() {
     });
 
     // my-order
-    app.get("/my-order/:email", async (req, res) => {
+    app.get("/addToCart/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
-      const result = await ordersCollection.findOne(query);
+      const result = await addToCartCollection.findOne(query);
       res.send(result);
     })
+
+
+    // payment
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+
+    })
+    app.post('/orders', async (req, res) => {
+      const payment = req.body;
+      const result = await ordersCollection.insertOne(payment);
+      const email = payment.customerEmail;
+      const query = { email: email }
+      const result1 = await addToCartCollection.deleteOne(query)
+      res.send(result);
+    })
+
+
+    app.get('/orders', async (req, res) => {
+
+      const result = await ordersCollection.find().sort({ _id: -1 }).limit(6).toArray();
+      const result1 = await ordersCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalPrice: { $sum: "$price" }
+          }
+        }
+      ]).toArray();
+
+      // console.log("Total Price:", result1[0]?.totalPrice || 0);
+
+      res.send({ result, result1 })
+    })
+
+
+    app.get('/orders/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { customerEmail: email };
+      const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    })
+
 
 
 
