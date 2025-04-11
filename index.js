@@ -9,15 +9,9 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-<<<<<<< HEAD
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.o3yie.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jenr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
-=======
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
->>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
 const corsOptions = {
   origin: ["http://localhost:5173"],
@@ -39,15 +33,6 @@ app.use(cors(corsOptions));
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
-    // const usersCollection = client.db('Fast-Bite').collection('users');
-    // const menuCollection = client.db('fastBite').collection('menu');
-    // const cartCollection = client.db('fastBite').collection('cart');
-    // const restaurantCollection = client.db('Fast-Bite').collection('restaurant');
-    // const becomeMemberCollection = client.db('Fast-Bite').collection('become-member');
-    // const riderCollection = client.db('Fast-Bite').collection('rider');
 
     // *********** All Collection List ************
 
@@ -280,74 +265,11 @@ async function run() {
     // ---------------------------------------------------------------------------------------------------
     // order collection
 
-<<<<<<< HEAD
 
     app.post("/addToCart", async (req, res) => {
       const orderInfo = req.body;
       const emailQuery = { email: orderInfo.email };
       const foodItem = await foodsCollection.findOne({ _id: new ObjectId(orderInfo.food.foodId) });
-=======
-    // app.post("/orders", async (req, res) => {
-    //   const orderInfo = req.body;
-    //   const emailQuery = { email: orderInfo.email };
-
-    //   let user = await ordersCollection.findOne(emailQuery);
-    //   let newUser;
-
-    //   if (user) {
-    //     const foodId = orderInfo.food.id;
-
-    //     const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
-
-    //     if (foodIndex !== -1) {
-
-    //       user.cart[foodIndex].quantity += 1;
-    //     } else {
-
-    //       user.cart.push({ foodId: foodId, quantity: 1 });
-    //     }
-
-    //     const result = await ordersCollection.updateOne(
-    //       { email: orderInfo.email },
-    //       { $set: { cart: user.cart } }
-    //     );
-
-    //     await foodsCollection.updateOne(
-    //       { _id: new ObjectId(foodId) },
-    //       { $inc: { quantity: -1 } }
-    //     );
-
-    //     res.send(result);
-    //   } else {
-
-    //     newUser = {
-    //       email: orderInfo.email,
-    //       cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
-    //     };
-
-    //     const result = await ordersCollection.insertOne(newUser);
-
-    //     await foodsCollection.updateOne(
-    //       { _id: new ObjectId(orderInfo.food.id) },
-    //       { $inc: { quantity: -1 } }
-    //     );
-
-    //     res.send(result);
-    //   }
-    //   if (newUser) {
-    //     console.log("New user created:", newUser.email);
-    //   }
-    // });
-
-    app.post("/orders", async (req, res) => {
-      const orderInfo = req.body;
-      const emailQuery = { email: orderInfo.email };
-
-      // Step 1: Find food details from DB to get name, price, and restaurantId
-      const foodItem = await foodsCollection.findOne({
-        _id: new ObjectId(orderInfo.food.foodId),
-      });
->>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
       if (!foodItem) {
         return res.status(404).send({ message: "Food not found" });
@@ -378,21 +300,11 @@ async function run() {
             price: unitPrice,
             restaurantId: restaurantId,
             image: foodImage,
-<<<<<<< HEAD
             status: 'isPending',
           });
         }
         const totalQuantity = user.cart.reduce((sum, item) => sum + item.quantity, 0);
         const result = await addToCartCollection.updateOne(
-=======
-          });
-        }
-        const totalQuantity = user.cart.reduce(
-          (sum, item) => sum + item.quantity,
-          0
-        );
-        const result = await ordersCollection.updateOne(
->>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
           { email: orderInfo.email },
           { $set: { cart: user.cart, totalQuantity } }
         );
@@ -415,18 +327,11 @@ async function run() {
               price: unitPrice,
               restaurantId: restaurantId,
               image: foodImage,
-<<<<<<< HEAD
               status: 'isPending',
             }
           ],
 
           totalQuantity: 1
-=======
-            },
-          ],
-          status: "isPending",
-          totalQuantity: 1,
->>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
         };
 
         const result = await addToCartCollection.insertOne(newUser);
@@ -446,7 +351,6 @@ async function run() {
       const query = { email: email };
       const result = await addToCartCollection.findOne(query);
       res.send(result);
-<<<<<<< HEAD
     })
 
 
@@ -502,9 +406,6 @@ async function run() {
 
 
 
-=======
-    });
->>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
     // ---------------------------------------------------------------------------------------------------
 
