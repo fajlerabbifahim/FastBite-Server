@@ -10,8 +10,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jenr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const corsOptions = {
   origin: ["http://localhost:5173"],
   // origin: [],
@@ -39,8 +38,7 @@ async function run() {
     // *********** All Collection List ************
 
     const usersCollection = client.db("Fast-Bite").collection("users");
-    const menuCollection = client.db("fastBite").collection("menu");
-    const cartCollection = client.db("fastBite").collection("cart");
+
     const restaurantCollection = client
       .db("Fast-Bite")
       .collection("restaurants");
@@ -50,6 +48,9 @@ async function run() {
       .collection("become-member");
     const riderCollection = client.db("Fast-Bite").collection("rider");
     const foodsCollection = client.db("Fast-Bite").collection("foods");
+    const restaurantReviewCollection = client
+      .db("Fast-Bite")
+      .collection("restaurantReviews");
 
     // Save the user to the database.
     app.post("/users/:email", async (req, res) => {
@@ -154,6 +155,34 @@ async function run() {
 
     app.get("/foods", async (req, res) => {
       const result = await foodsCollection.find().toArray();
+      res.send(result);
+    });
+
+    //get food item for restaurant details page by there restaurant id
+
+    app.get("/restaurantFoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await foodsCollection.find({ restaurantId: id }).toArray();
+      res.send(result);
+    });
+
+    // ==================review related apis==================
+
+    // post a restaurant reviews
+    app.post("/restaurantReviews", async (req, res) => {
+      const review = req.body;
+      const result = await restaurantReviewCollection.insertOne(review);
+      res.send(result);
+    });
+
+    //get individual restaurant review by id
+    app.get("/restaurantReviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await restaurantReviewCollection
+        .find({
+          restaurantID: id,
+        })
+        .toArray();
       res.send(result);
     });
 
