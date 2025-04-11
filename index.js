@@ -10,10 +10,14 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
+<<<<<<< HEAD
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.o3yie.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jenr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
+=======
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+>>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
 const corsOptions = {
   origin: ["http://localhost:5173"],
@@ -48,8 +52,16 @@ async function run() {
     // *********** All Collection List ************
 
     const usersCollection = client.db("Fast-Bite").collection("users");
-    const restaurantCollection = client.db("Fast-Bite").collection("restaurants");
-    const becomeMemberCollection = client.db("Fast-Bite").collection("become-member");
+
+    const restaurantReviewCollection = client
+      .db("Fast-Bite")
+      .collection("restaurantReviews");
+    const restaurantCollection = client
+      .db("Fast-Bite")
+      .collection("restaurants");
+    const becomeMemberCollection = client
+      .db("Fast-Bite")
+      .collection("become-member");
     const riderCollection = client.db("Fast-Bite").collection("rider");
     const foodsCollection = client.db("Fast-Bite").collection("foods");
     const ordersCollection = client.db("Fast-Bite").collection("orders");
@@ -148,7 +160,7 @@ async function run() {
         if (!result) {
           return res.status(404).send({ error: "Restaurant not found" });
         }
-        console.log(result)
+        console.log(result);
         res.send(result);
       } catch (error) {
         console.error("Error fetching restaurant details:", error);
@@ -169,6 +181,33 @@ async function run() {
       res.send(result);
     });
 
+    //get food item for restaurant details page by there restaurant id
+
+    app.get("/restaurantFoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await foodsCollection.find({ restaurantId: id }).toArray();
+      res.send(result);
+    });
+
+    // ==================review related apis==================
+
+    // post a restaurant reviews
+    app.post("/restaurantReviews", async (req, res) => {
+      const review = req.body;
+      const result = await restaurantReviewCollection.insertOne(review);
+      res.send(result);
+    });
+
+    //get individual restaurant review by id
+    app.get("/restaurantReviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await restaurantReviewCollection
+        .find({
+          restaurantID: id,
+        })
+        .toArray();
+      res.send(result);
+    });
     app.get("/food-details/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -176,14 +215,13 @@ async function run() {
       const restaurantId = food.restaurantId;
       // console.log(restaurantId)
       const filter = { _id: new ObjectId(restaurantId) };
-      const restaurant = await restaurantCollection.findOne(filter)
+      const restaurant = await restaurantCollection.findOne(filter);
       const owner_email = restaurant.owner_email;
       const email = { email: owner_email };
       const owner = await usersCollection.findOne(email);
 
-
       res.send({ food, restaurant, owner });
-    })
+    });
 
     // becomeMemberCollection
     app.post("/become-member", async (req, res) => {
@@ -242,11 +280,74 @@ async function run() {
     // ---------------------------------------------------------------------------------------------------
     // order collection
 
+<<<<<<< HEAD
 
     app.post("/addToCart", async (req, res) => {
       const orderInfo = req.body;
       const emailQuery = { email: orderInfo.email };
       const foodItem = await foodsCollection.findOne({ _id: new ObjectId(orderInfo.food.foodId) });
+=======
+    // app.post("/orders", async (req, res) => {
+    //   const orderInfo = req.body;
+    //   const emailQuery = { email: orderInfo.email };
+
+    //   let user = await ordersCollection.findOne(emailQuery);
+    //   let newUser;
+
+    //   if (user) {
+    //     const foodId = orderInfo.food.id;
+
+    //     const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
+
+    //     if (foodIndex !== -1) {
+
+    //       user.cart[foodIndex].quantity += 1;
+    //     } else {
+
+    //       user.cart.push({ foodId: foodId, quantity: 1 });
+    //     }
+
+    //     const result = await ordersCollection.updateOne(
+    //       { email: orderInfo.email },
+    //       { $set: { cart: user.cart } }
+    //     );
+
+    //     await foodsCollection.updateOne(
+    //       { _id: new ObjectId(foodId) },
+    //       { $inc: { quantity: -1 } }
+    //     );
+
+    //     res.send(result);
+    //   } else {
+
+    //     newUser = {
+    //       email: orderInfo.email,
+    //       cart: [{ foodId: orderInfo.food.id, quantity: 1 }]
+    //     };
+
+    //     const result = await ordersCollection.insertOne(newUser);
+
+    //     await foodsCollection.updateOne(
+    //       { _id: new ObjectId(orderInfo.food.id) },
+    //       { $inc: { quantity: -1 } }
+    //     );
+
+    //     res.send(result);
+    //   }
+    //   if (newUser) {
+    //     console.log("New user created:", newUser.email);
+    //   }
+    // });
+
+    app.post("/orders", async (req, res) => {
+      const orderInfo = req.body;
+      const emailQuery = { email: orderInfo.email };
+
+      // Step 1: Find food details from DB to get name, price, and restaurantId
+      const foodItem = await foodsCollection.findOne({
+        _id: new ObjectId(orderInfo.food.foodId),
+      });
+>>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
       if (!foodItem) {
         return res.status(404).send({ message: "Food not found" });
@@ -261,12 +362,13 @@ async function run() {
       let user = await addToCartCollection.findOne(emailQuery);
 
       if (user) {
-        const foodIndex = user.cart.findIndex(item => item.foodId === foodId);
+        const foodIndex = user.cart.findIndex((item) => item.foodId === foodId);
 
         if (foodIndex !== -1) {
           // Update existing food item in cart
           user.cart[foodIndex].quantity += 1;
-          user.cart[foodIndex].price = user.cart[foodIndex].quantity * unitPrice;
+          user.cart[foodIndex].price =
+            user.cart[foodIndex].quantity * unitPrice;
         } else {
           // Add new item to cart
           user.cart.push({
@@ -276,11 +378,21 @@ async function run() {
             price: unitPrice,
             restaurantId: restaurantId,
             image: foodImage,
+<<<<<<< HEAD
             status: 'isPending',
           });
         }
         const totalQuantity = user.cart.reduce((sum, item) => sum + item.quantity, 0);
         const result = await addToCartCollection.updateOne(
+=======
+          });
+        }
+        const totalQuantity = user.cart.reduce(
+          (sum, item) => sum + item.quantity,
+          0
+        );
+        const result = await ordersCollection.updateOne(
+>>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
           { email: orderInfo.email },
           { $set: { cart: user.cart, totalQuantity } }
         );
@@ -303,11 +415,18 @@ async function run() {
               price: unitPrice,
               restaurantId: restaurantId,
               image: foodImage,
+<<<<<<< HEAD
               status: 'isPending',
             }
           ],
 
           totalQuantity: 1
+=======
+            },
+          ],
+          status: "isPending",
+          totalQuantity: 1,
+>>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
         };
 
         const result = await addToCartCollection.insertOne(newUser);
@@ -327,6 +446,7 @@ async function run() {
       const query = { email: email };
       const result = await addToCartCollection.findOne(query);
       res.send(result);
+<<<<<<< HEAD
     })
 
 
@@ -382,6 +502,9 @@ async function run() {
 
 
 
+=======
+    });
+>>>>>>> 8fcbebabc17c581119dc8e09d0d21c17e35714be
 
     // ---------------------------------------------------------------------------------------------------
 
@@ -393,8 +516,6 @@ async function run() {
     //   const result = await cartCollection.findOne(query);
     //   res.send(result);
     // });
-
-
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
