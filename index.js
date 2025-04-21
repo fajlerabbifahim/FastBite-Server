@@ -182,6 +182,21 @@ async function run() {
       res.send(result);
     });
 
+    app.post('/addNewFood', async (req, res) => {
+      const food = req.body;
+      // console.log(food)
+      const result = await foodsCollection.insertOne(food);
+      // console.log(result)
+      res.send(result);
+    })
+
+    app.get('/food/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await foodsCollection.find(query).toArray();
+      res.send(result);
+    })
+
     // ==================review related apis==================
 
     // post a restaurant reviews
