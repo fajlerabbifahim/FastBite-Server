@@ -157,7 +157,7 @@ async function run() {
     // =================food Related apis====================
 
     app.get("/popularDishes", async (req, res) => {
-      const data = await foodsCollection.find().toArray();
+      const data = await foodsCollection.find().sort({ _id: -1 }).limit(8).toArray()
       const result = data.slice(0, 8);
       res.send(result);
     });
@@ -181,6 +181,21 @@ async function run() {
       const result = await foodsCollection.find({ restaurantId: id }).toArray();
       res.send(result);
     });
+
+    app.post('/addNewFood', async (req, res) => {
+      const food = req.body;
+      // console.log(food)
+      const result = await foodsCollection.insertOne(food);
+      // console.log(result)
+      res.send(result);
+    })
+
+    app.get('/food/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await foodsCollection.find(query).toArray();
+      res.send(result);
+    })
 
     // ==================review related apis==================
 
@@ -341,13 +356,17 @@ async function run() {
       const payment = req.body;
       for (const item of payment.Cart) {
         const order = {
-          customer_email: item.customer_email,
+          customer_name: payment.customer_name,
+          customer_email: payment.customer_email,
           food_id: item.food_id,
           food_name: item.food_name,
           food_image: item.food_image,
           price: item.price,
           quantity: item.quantity,
           owner_email: item.owner_email,
+          contact: payment.contact_number,
+          address: payment.address,
+          transactionId: payment.transactionId,
           status: 'isPending'
         };
         await ordersCollection.insertOne(order); // Insert each item as an order
@@ -368,9 +387,6 @@ async function run() {
           }
         }
       ]).toArray();
-
-      // console.log("Total Price:", result1[0]?.totalPrice || 0);
-
       res.send({ result, result1 })
     })
 
@@ -382,6 +398,14 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/restaurant-order/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        owner_email: email
+      }
+      const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    })
 
 
 
