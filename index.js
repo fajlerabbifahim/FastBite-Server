@@ -356,13 +356,17 @@ async function run() {
       const payment = req.body;
       for (const item of payment.Cart) {
         const order = {
-          customer_email: item.customer_email,
+          customer_name: payment.customer_name,
+          customer_email: payment.customer_email,
           food_id: item.food_id,
           food_name: item.food_name,
           food_image: item.food_image,
           price: item.price,
           quantity: item.quantity,
           owner_email: item.owner_email,
+          contact: payment.contact_number,
+          address: payment.address,
+          transactionId: payment.transactionId,
           status: 'isPending'
         };
         await ordersCollection.insertOne(order); // Insert each item as an order
