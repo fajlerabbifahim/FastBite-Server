@@ -157,7 +157,7 @@ async function run() {
     // =================food Related apis====================
 
     app.get("/popularDishes", async (req, res) => {
-      const data = await foodsCollection.find().toArray();
+      const data = await foodsCollection.find().sort({ _id: -1 }).limit(8).toArray()
       const result = data.slice(0, 8);
       res.send(result);
     });
@@ -383,9 +383,6 @@ async function run() {
           }
         }
       ]).toArray();
-
-      // console.log("Total Price:", result1[0]?.totalPrice || 0);
-
       res.send({ result, result1 })
     })
 
@@ -397,6 +394,14 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/restaurant-order/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        owner_email: email
+      }
+      const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    })
 
 
 
