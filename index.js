@@ -46,6 +46,7 @@ async function run() {
       .db("Fast-Bite")
       .collection("become-member");
     const riderCollection = client.db("Fast-Bite").collection("rider");
+    const sellerCollection = client.db("Fast-Bite").collection("seller");
     const foodsCollection = client.db("Fast-Bite").collection("foods");
     const ordersCollection = client.db("Fast-Bite").collection("orders");
     const addToCartCollection = client.db("Fast-Bite").collection("addToCart");
@@ -154,7 +155,11 @@ async function run() {
     // =================food Related apis====================
 
     app.get("/popularDishes", async (req, res) => {
-      const data = await foodsCollection.find().toArray();
+      const data = await foodsCollection
+        .find()
+        .sort({ _id: -1 })
+        .limit(8)
+        .toArray();
       const result = data.slice(0, 8);
       res.send(result);
     });
@@ -164,11 +169,33 @@ async function run() {
       res.send(result);
     });
 
+    app.delete("/food/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodsCollection.deleteOne(query);
+      res.send(result);
+    });
+
     //get food item for restaurant details page by there restaurant id
 
     app.get("/restaurantFoods/:id", async (req, res) => {
       const id = req.params.id;
       const result = await foodsCollection.find({ restaurantId: id }).toArray();
+      res.send(result);
+    });
+
+    app.post("/addNewFood", async (req, res) => {
+      const food = req.body;
+      // console.log(food)
+      const result = await foodsCollection.insertOne(food);
+      // console.log(result)
+      res.send(result);
+    });
+
+    app.get("/food/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await foodsCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -220,7 +247,7 @@ async function run() {
     });
     app.get("/become-member/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email };
+      const query = { owner_email: email };
       const result = await becomeMemberCollection.findOne(query);
       // console.log(result)
       res.send(result);
@@ -235,24 +262,28 @@ async function run() {
     });
 
     // Rider crud operation in the database.
-    app.post("/rider/:id", async (req, res) => {
+    app.post("/member/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
 
       let result = await becomeMemberCollection.findOne(query);
-      let filter = { email: result.email };
-      let result1 = await usersCollection.findOne(filter);
+      let filter = { email: result.owner_email };
       const updateDoc = {
         $set: {
           role: result.role,
         },
       };
+      await usersCollection.updateOne(filter, updateDoc);
       result.isApprove = true;
-      result = await riderCollection.insertOne(result);
-      result1 = await usersCollection.updateOne(filter, updateDoc);
-      const result3 = await becomeMemberCollection.deleteOne(query);
+      let newResult;
+      if (result.role === "rider") {
+        newResult = await riderCollection.insertOne(result);
+      } else {
+        newResult = await restaurantCollection.insertOne(result);
+      }
+      await becomeMemberCollection.deleteOne(query);
 
-      res.send(result);
+      res.send(newResult);
     });
 
     // get menu items
@@ -265,93 +296,45 @@ async function run() {
 
     app.post("/addToCart", async (req, res) => {
       const orderInfo = req.body;
-      const emailQuery = { email: orderInfo.email };
-      const foodItem = await foodsCollection.findOne({
-        _id: new ObjectId(orderInfo.food.foodId),
+      const existingOrder = await addToCartCollection.findOne({
+        customer_email: orderInfo.customer_email,
+        food_id: orderInfo.food_id,
       });
-
-      if (!foodItem) {
-        return res.status(404).send({ message: "Food not found" });
-      }
-
-      const foodId = orderInfo.food.foodId;
-      const foodImage = orderInfo.food.foodImage;
-      const restaurantId = foodItem.restaurantId;
-      const foodName = foodItem.name;
-      const unitPrice = foodItem.price;
-
-      let user = await addToCartCollection.findOne(emailQuery);
-
-      if (user) {
-        const foodIndex = user.cart.findIndex((item) => item.foodId === foodId);
-
-        if (foodIndex !== -1) {
-          // Update existing food item in cart
-          user.cart[foodIndex].quantity += 1;
-          user.cart[foodIndex].price =
-            user.cart[foodIndex].quantity * unitPrice;
-        } else {
-          // Add new item to cart
-          user.cart.push({
-            foodId: foodId,
-            name: foodName,
-            quantity: 1,
-            price: unitPrice,
-            restaurantId: restaurantId,
-            image: foodImage,
-            status: "isPending",
-          });
-        }
-        const totalQuantity = user.cart.reduce(
-          (sum, item) => sum + item.quantity,
-          0
-        );
-        const result = await addToCartCollection.updateOne(
-          { email: orderInfo.email },
-          { $set: { cart: user.cart, totalQuantity } }
-        );
-        // Reduce quantity from foodsCollection
-        await foodsCollection.updateOne(
-          { _id: new ObjectId(foodId) },
-          { $inc: { quantity: -1 } }
-        );
-
-        res.send(result);
-      } else {
-        // If user doesn't exist, create new
-        const newUser = {
-          email: orderInfo.email,
-          cart: [
-            {
-              foodId: foodId,
-              name: foodName,
-              quantity: 1,
-              price: unitPrice,
-              restaurantId: restaurantId,
-              image: foodImage,
-              status: "isPending",
+      await foodsCollection.updateOne(
+        { _id: new ObjectId(orderInfo.food_id) },
+        { $inc: { quantity: -1 } }
+      );
+      if (existingOrder) {
+        const updatedQuantity = existingOrder.quantity + 1;
+        const updatedPrice = existingOrder.price + orderInfo.price;
+        const updateResult = await addToCartCollection.updateOne(
+          { _id: existingOrder._id },
+          {
+            $set: {
+              quantity: updatedQuantity,
+              price: updatedPrice,
             },
-          ],
-
-          totalQuantity: 1,
-        };
-
-        const result = await addToCartCollection.insertOne(newUser);
-
-        await foodsCollection.updateOne(
-          { _id: new ObjectId(foodId) },
-          { $inc: { quantity: -1 } }
+          }
         );
-
-        res.send(result);
+        res.send(updateResult);
+      } else {
+        const insertResult = await addToCartCollection.insertOne(orderInfo);
+        res.send(insertResult);
       }
     });
 
     // my-order
     app.get("/addToCart/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email: email };
-      const result = await addToCartCollection.findOne(query);
+      const query = { customer_email: email };
+      const result = await addToCartCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/deleteCartItem/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await addToCartCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -370,10 +353,26 @@ async function run() {
     });
     app.post("/orders", async (req, res) => {
       const payment = req.body;
-      const result = await ordersCollection.insertOne(payment);
-      const email = payment.customerEmail;
-      const query = { email: email };
-      const result1 = await addToCartCollection.deleteOne(query);
+      for (const item of payment.Cart) {
+        const order = {
+          customer_name: payment.customer_name,
+          customer_email: payment.customer_email,
+          food_id: item.food_id,
+          food_name: item.food_name,
+          food_image: item.food_image,
+          price: item.price,
+          quantity: item.quantity,
+          owner_email: item.owner_email,
+          contact: payment.contact_number,
+          address: payment.address,
+          transactionId: payment.transactionId,
+          status: "isPending",
+        };
+        await ordersCollection.insertOne(order); // Insert each item as an order
+      }
+      const result = await addToCartCollection.deleteMany({
+        customer_email: payment.customer_email,
+      });
       res.send(result);
     });
 
@@ -393,15 +392,21 @@ async function run() {
           },
         ])
         .toArray();
-
-      // console.log("Total Price:", result1[0]?.totalPrice || 0);
-
       res.send({ result, result1 });
     });
 
     app.get("/orders/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { customerEmail: email };
+      const query = { customer_email: email };
+      const result = await ordersCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/restaurant-order/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        owner_email: email,
+      };
       const result = await ordersCollection.find(query).toArray();
       res.send(result);
     });
