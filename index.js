@@ -14,7 +14,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   // origin: [],
   credentials: true,
   optionalSuccessStatus: 200,
@@ -52,6 +52,7 @@ async function run() {
     const foodsCollection = client.db("Fast-Bite").collection("foods");
     const ordersCollection = client.db("Fast-Bite").collection("orders");
     const addToCartCollection = client.db("Fast-Bite").collection("addToCart");
+    const deliverItemCollection = client.db("Fast-Bite").collection("deliverItem");
 
     // Save the user to the database.
     app.post("/users/:email", async (req, res) => {
@@ -398,6 +399,7 @@ async function run() {
       res.send(result);
     })
 
+    // get restaurant order by user email
     app.get('/restaurant-order/:email', async (req, res) => {
       const email = req.params.email;
       const query = {
@@ -407,8 +409,29 @@ async function run() {
       res.send(result);
     })
 
+    // update order status by id
+    app.patch("/restaurant-order/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+      // if (status === 'Deliver') {
+      //   await 
+      // }
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: { status },
+      }
+      const result = await ordersCollection.updateOne(query, updateDoc)
+      console.log(result);
+      res.send({})
+    })
 
 
+    // ------------------------------------------------------------------------------------
+    // Rider operation
+    app.get("/all-riders", async (req, res) => {
+      const result = await riderCollection.find().toArray();
+      res.send(result)
+    })
 
     // ---------------------------------------------------------------------------------------------------
 
