@@ -13,7 +13,11 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8esgxxo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://fastbite-bd17d.web.app",
+  ],
   // origin: [],
   credentials: true,
   optionalSuccessStatus: 200,
@@ -369,7 +373,7 @@ async function run() {
           contact: payment.contact_number,
           address: payment.address,
           transactionId: payment.transactionId,
-          status: "isPending",
+          status: "Pending",
         };
         await ordersCollection.insertOne(order); // Insert each item as an order
       }
@@ -419,16 +423,14 @@ async function run() {
     app.patch("/restaurant-order/:id", async (req, res) => {
       const id = req.params.id;
       const { status } = req.body;
-      // if (status === 'Deliver') {
-      //   await
-      // }
+
       const query = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: { status },
       };
       const result = await ordersCollection.updateOne(query, updateDoc);
       console.log(result);
-      res.send({});
+      res.send(result);
     });
 
     // ------------------------------------------------------------------------------------
@@ -439,6 +441,36 @@ async function run() {
     });
 
     // ---------------------------------------------------------------------------------------------------
+    // deliver collection
+    app.post("/deliver-item", async (req, res) => {
+      const orderInfo = req.body;
+      const result = await deliverItemCollection.insertOne(orderInfo);
+      res.send(result);
+    });
+
+    app.get("/deliver-item/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { rider_email: email };
+      const result = await deliverItemCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.patch("/deliver-item/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+
+      const query = { _id: new ObjectId(id) };
+      const re1 = await deliverItemCollection.findOne(query);
+      const filter = { _id: new ObjectId(re1.order_id) };
+      // console.log('456', re1)
+      const updateDoc = {
+        $set: { status },
+      };
+      const result = await deliverItemCollection.updateOne(query, updateDoc);
+      const result1 = await ordersCollection.updateOne(filter, updateDoc);
+      console.log(result1);
+      res.send(result);
+    });
 
     //get cart items
     // app.get("/cartItems", async (req, res) => {
